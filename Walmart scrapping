@@ -1,0 +1,52 @@
+import pandas as pd
+import time
+import numpy as np
+import requests
+import csv
+from selenium.webdriver.support.ui import Select
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+
+driver = webdriver.Chrome("C:\webdriver\chromedriver.exe")
+
+driver.get('https://www.walmart.com/ip/Clorox-Disinfecting-Wipes-225-Count-Value-Pack-Crisp-Lemon-and-Fresh-Scent-3-Pack-75-Count-Each/14898365')
+
+driver.maximize_window()
+time.sleep(10)
+button = driver.find_element_by_link_text("See all reviews")
+button.click()
+driver.execute_script("window.scrollTo(0,762)")
+
+inputelement = driver.find_element_by_id('product-review-scroll-hook')
+
+dropdown = Select(driver.find_element_by_xpath("//select[@aria-label= 'Sort by']"))
+dropdown.select_by_value("submission-desc")
+
+outfile = open("scrappers.csv","w",newline='')
+writer=csv.writer(outfile)
+    
+review_df=pd.DataFrame(columns=['Date','Name','Title','Body','Ratings'])
+
+y=1
+rev=[]
+while(y!=23):
+    driver.get('https://www.walmart.com/reviews/product/14898365?page='+str(y)+'&sort=submission-desc')
+    all_rating = driver.find_elements(By.XPATH,"//meta[@itemprop='ratingValue']")
+    all_name= driver.find_elements(By.XPATH,"//span[contains(@class,'review-footer-userNickname')]")
+    all_date= driver.find_elements(By.XPATH,"//span[contains(@class,'review-date-submissionTime')]")
+    all_title = driver.find_elements(By.XPATH,"//h3[@itemprop='name']")
+    all_body= driver.find_elements(By.CLASS_NAME,"review-text")
+    for r,n,t,d,b in zip(all_rating,all_name,all_title,all_date,all_body):
+        row={
+            'Name':n.text.strip(),
+            'Rating':r.get_attribute("content").strip(),
+            'Title':t.text.strip(),
+            'Date':d.text.strip(),
+            'Body':b.text.strip(),
+                }
+        print(row)
+        rev.append(row)
+        review_df=pd.DataFrame(rev)
+        review_df.to_csv('scrappers.csv',index=False)
+    time.sleep(2)
+    y+=1
